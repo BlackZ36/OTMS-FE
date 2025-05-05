@@ -9,11 +9,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
-import { GetClassById, UpdateClass } from "@/services/classService";
+import { DeleteClassById, GetClassById, UpdateClass } from "@/services/classService";
 import { getLecturerList } from "@/services/accountService";
 import { getAllCourse } from "@/services/courseService";
 import CalendarSelector from "@/components/CalendarSelector";
 import { ClassBadge } from "@/components/BadgeComponent";
+import { clearSessionByClassId } from "@/services/sessionService";
 
 export default function ClassEditPage() {
   const [searchParams] = useSearchParams();
@@ -44,43 +45,45 @@ export default function ClassEditPage() {
   const [showScheduledDialog, setShowScheduledDialog] = useState(false);
   const [showEditLecturerDialog, setShowEditLecturerDialog] = useState(false);
   const [showDeleteClassDialog, setShowDeleteClassDialog] = useState(false);
+  const [showClearSessionDialog, setShowClearSessionDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch class data
-  useEffect(() => {
-    const fetchData = async () => {
-      if (classId) {
-        setIsLoading(true); // Cần reset loading trước khi fetch
-        try {
-          const classData = await GetClassById(classId);
-          const lecturerData = await getLecturerList();
-          const courseData = await getAllCourse();
+  const fetchData = async () => {
+    if (classId) {
+      setIsLoading(true); // Cần reset loading trước khi fetch
+      try {
+        const classData = await GetClassById(classId);
+        const lecturerData = await getLecturerList();
+        const courseData = await getAllCourse();
 
-          if (classData.status === 200 && classData.data != null) {
-            setClassItem(classData.data);
-            if (classData.data.lecturer) {
-              setSelectedLecturer(classData.data.lecturer.accountId);
-              setMeetUrl(classData.data.lecturer.meetUrl);
-            }
+        if (classData.status === 200 && classData.data != null) {
+          setClassItem(classData.data);
+          if (classData.data.lecturer) {
+            setSelectedLecturer(classData.data.lecturer.accountId);
+            setMeetUrl(classData.data.lecturer.meetUrl);
+          }
 
-            setTempStatus(classData.data.status);
-          }
-          if (lecturerData.status === 200 && lecturerData.data != null) {
-            setLecturers(lecturerData.data);
-          }
-          if (courseData.status === 200 && courseData.data != null) {
-            setCourses(courseData.data);
-          }
-        } catch (error) {
-          toast.error("Error fetching class data");
-          console.log(error);
-        } finally {
-          setIsLoading(false); // Đảm bảo tắt loading khi hoàn thành
+          setTempStatus(classData.data.status);
         }
-      } else {
-        navigate("/404");
+        if (lecturerData.status === 200 && lecturerData.data != null) {
+          setLecturers(lecturerData.data);
+        }
+        if (courseData.status === 200 && courseData.data != null) {
+          setCourses(courseData.data);
+        }
+      } catch (error) {
+        toast.error("Error fetching class data");
+        console.log(error);
+      } finally {
+        setIsLoading(false); // Đảm bảo tắt loading khi hoàn thành
       }
-    };
+    } else {
+      navigate("/404");
+    }
+  };
+  useEffect(() => {
+
     fetchData();
   }, [classId, navigate]);
 
@@ -102,9 +105,26 @@ export default function ClassEditPage() {
     }
   };
 
-  const handleCheckTotalSession = () => {
-    setClassItem((prev) => ({ ...prev, totalSession: 0 }));
-    toast("Total sessions updated");
+  const handleClearSession = async () => {
+    if (!classItem) return;
+
+    try {
+      const response = await clearSessionByClassId(classItem.classId);
+      console.log(response);
+
+      if (response.status === 200) {
+        toast.success("Session Cleared Successfully");
+        fetchData();
+        setShowClearSessionDialog(false)
+      } else {
+        toast.error('Failed to clear class sessions')
+        setShowClearSessionDialog(false)
+      }
+    } catch (error) {
+      setShowClearSessionDialog(false)
+      log.error(error)
+    }
+
   };
 
   const toggleEditLecturer = () => {
@@ -141,6 +161,8 @@ export default function ClassEditPage() {
 
         if (response.status === 200) {
           toast.success("Class information has been saved successfully");
+          // fetchData()
+          navigate('/officer/class')
         } else {
           toast.error("Update Failed");
         }
@@ -157,11 +179,16 @@ export default function ClassEditPage() {
     setTempStatus(value);
   };
 
-  const handleDeleteClass = async () => {
+  const handleDeleteClass = async (classId) => {
     try {
-      setIsDeleting(true);
+      const response = await DeleteClassById(classId);
+      if (response.status === 200) {
+        toast.success("Class Deleted Successfully!")
+        navigate('/officer/class')
+      }
     } catch (error) {
       console.log(error);
+      toast.error("Class Deleted Failed!", error)
     }
   };
 
@@ -181,7 +208,7 @@ export default function ClassEditPage() {
           <Button onClick={() => navigate("/officer/class")}>
             <ChevronLeft className="mr-2 h-4 w-4" /> Back To List
           </Button>
-          <Button variant="destructive" onClick={() => setShowDeleteClassDialog(true)} disabled={classItem.status !== 1}>
+          <Button variant="destructive" onClick={() => setShowDeleteClassDialog(true)} disabled={classItem.status === 2}>
             <Trash2 className="ml-2 h-4 w-4" /> Delete Class
           </Button>
         </div>
@@ -256,7 +283,7 @@ export default function ClassEditPage() {
                 <Label htmlFor="totalSession">Total Sessions</Label>
                 <div className="flex gap-2">
                   <Input id="totalSession" name="totalSession" type="number" value={classItem.totalSession} disabled />
-                  <Button disabled={classItem.status !== 2} variant="outline" size="icon" onClick={handleCheckTotalSession} title="Check total sessions">
+                  <Button disabled={classItem.status === 2 || classItem.totalSession === 0} variant="outline" size="icon" onClick={() => setShowClearSessionDialog(true)} title="clear session">
                     <Trash2 className="h-4 w-4 text-red-500" />
                   </Button>
                 </div>
@@ -392,10 +419,33 @@ export default function ClassEditPage() {
             <Button variant="outline" onClick={() => setShowDeleteClassDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={() => handleDeleteClass()}>Confirm</Button>
+            <Button onClick={() => handleDeleteClass(classItem.classId)}>Confirm</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* clear session confirmation dialog */}
+      <Dialog open={showClearSessionDialog} onOpenChange={setShowClearSessionDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Clear Session</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to clear all sessions of the class <strong>{classItem.classCode}</strong>?
+              <br /> Number of sessions to be deleted: <span className="text-red-500 font-bold">{classItem.totalSession}</span>
+              <br /> This will permanently remove all related records, files, and reports.
+              <br /> This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowClearSessionDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => handleClearSession(classItem.classId)}>Clear</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
     </div>
   );
 }

@@ -80,6 +80,7 @@ import ViewOfficerSessionReportPage from "./pages/dashboard/officer/report/offic
 import { ViewAttendanceOfficerPage } from "./pages/dashboard/officer/attendance/view-attendance-officer-page";
 import AdminMonitoring from "./pages/dashboard/admin/monitoring/admin-monitoring-page";
 import Hero from "./components/homepage/Hero";
+import ContactPage from "./pages/support-page";
 
 function App() {
   return (
@@ -102,6 +103,8 @@ function App() {
                 <Route path="/first-time" element={<FirstTimeLoginPage />} />
                 <Route path="/logout" element={<LogoutPage />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/contact" element={<ContactPage />} />
+
 
                 {/* Auth route */}
                 <Route element={<PrivateRoute />}>
@@ -236,7 +239,7 @@ function App() {
                 </Route>
               </Routes>
             </Router>
-            <Toaster richColors position="top-right" offset={{ top: "50px", right: "10px" }} expand={true} theme={localStorage.getItem("theme")} visibleToasts={5} duration={6000} closeButton />
+            <Toaster richColors position="top-right"  expand={true} theme={localStorage.getItem("theme")} visibleToasts={5} duration={6000} closeButton />
           </ThemeProvider>
         </StoreProvider>
       </HelmetProvider>

@@ -1,6 +1,6 @@
 import axiosClient from "./axiosClient";
 
-export const uploadFile = async (file, classId, sessionId, type, onProgress = () => {}) => {
+export const uploadFile = async (file, classId, sessionId, type, onProgress = () => { }) => {
   const formData = new FormData();
   formData.append("File", file);
   formData.append("SessionId", sessionId);
@@ -66,7 +66,7 @@ export const deleteFileById = async (fileId) => {
 export const deleteRecordById = async (recordId) => {
   try {
     const response = await axiosClient.delete(`/files/record/${recordId}`);
-
+    //const response = await axiosClient.delete(`/record/delete/${recordId}`);
     return {
       status: response.status,
       data: response.data,
@@ -80,3 +80,21 @@ export const deleteRecordById = async (recordId) => {
     };
   }
 };
+
+export const updateFile = async (fileData) => {
+  try {
+    const response = await axiosClient.put(`/files/file/${fileData.fileId}`, fileData);
+
+    return {
+      status: response.status,
+      data: response.data,
+    };
+  } catch (error) {
+    console.error("Request failed:", error);
+
+    return {
+      status: error.response?.status || 500,
+      message: error.response?.data?.message || error.message || "Request failed!",
+    };
+  }
+}

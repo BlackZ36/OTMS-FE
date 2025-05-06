@@ -12,10 +12,6 @@ export default defineConfig({
     },
   },
   server: {
-    https: {
-      key: fs.readFileSync('localhost+2-key.pem'),
-      cert: fs.readFileSync('localhost+2.pem'),
-    },
     host: true, // Cho phép truy cập từ bên ngoài
     port: 3000, // Cổng đang chạy React
     strictPort: true, // Đảm bảo chạy đúng cổng
